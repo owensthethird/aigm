@@ -1,0 +1,18 @@
+{
+  "providers": [
+    {
+      "type": "ollama",
+      "endpoint": "http://localhost:11434",
+      "model": "llama3",
+      "enabled": true,
+      "priority": 1,
+      "healthCheck": true,
+      "timeout": 30000,
+      "maxRetries": 3
+    }
+  ],
+  "healthCheckIntervalMs": 60000,
+  "defaultContext": "ooc",
+  "functionCalling": true,
+  "maxHistoryMessages": 50
+}

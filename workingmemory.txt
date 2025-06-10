@@ -1,0 +1,17 @@
+ESLINT DISABLING OPTIONS
+
+1. Option 1: Create .env file to disable ESLint
+   - Create a .env file in the ui directory
+   - Add DISABLE_ESLINT_PLUGIN=true to disable ESLint during build
+   - This is the simplest solution and doesn't require modifying package.json
+
+2. Option 2: Modify webpack configuration
+   - Create a config-overrides.js file to override webpack configuration
+   - Disable ESLint plugin in the webpack config
+   - Requires installing react-app-rewired
+
+3. Option 3: Empty .eslintrc.js file
+   - Keep the file but remove all rules and configurations
+   - Set up minimal configuration that doesn't cause conflicts
+
+Option 1 is the simplest and most straightforward approach. Let's implement that first.

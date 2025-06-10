@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    "target": "es5",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react",
+    "baseUrl": "src",
+    "paths": {
+      "@components/*": ["components/*"],
+      "@contexts/*": ["contexts/*"],
+      "@utils/*": ["utils/*"],
+      "@styles/*": ["styles/*"],
+      "*": ["*"]
+    },
+    "typeRoots": ["node_modules/@types", "src/types"],
+    "jsxFactory": "React.createElement",
+    "jsxFragmentFactory": "React.Fragment"
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.d.ts",
+    "src",
+    "src/**/*"
+  ],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}

@@ -1,0 +1,9 @@
+{
+  "queue": {
+    "healthCheckActive": true
+  },
+  "n8n": {
+    "apiKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhMTMyNmI2OS0zYWU2LTRlMjctYTE1YS05OTgwMDg5OWNlOTMiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzQ5MzU1Mjc3fQ.i3Knne5OWzm1egvEA9amL7klOE_n5nGjbmH38bVW_0Q",
+    "baseUrl": "http://localhost:5678"
+  }
+}

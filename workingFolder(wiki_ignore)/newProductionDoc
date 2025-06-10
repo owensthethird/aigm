@@ -1,0 +1,258 @@
+# AI Game Master - Production Architecture Document
+
+## Executive Summary
+
+This document defines the internal structure and architecture for a locally-hosted AI Game Master and Companion system for text-based roleplaying games. The AI serves dual roles as both an interactive companion and game master, facilitating immersive solo roleplaying experiences through natural language interaction. The system operates entirely on local infrastructure, providing privacy, control, and customization.
+
+## System Architecture Overview
+
+The AI GM system consists of two primary components working in an integrated pipeline:
+
+```
+[User Interface] ↔ [n8n: Chat Trigger + AI Agent + Tool Workflows]
+```
+
+The local LLM operates **within** n8n as the AI Agent node, automatically calling tool workflows as needed. All components run locally on the same machine or local network, ensuring complete data privacy and system control.
+
+## Component Specifications
+
+### 1. User Interface (UI)
+**Purpose**: Text-based interaction layer for roleplaying conversations with AI GM/Companion
+
+**Architecture**: CSS Grid + Flexbox Layout System
+- **Grid Foundation**: Major layout zones and responsive breakpoints
+- **Flex Components**: Individual UI modules and content flow
+- **Modular Design**: Reusable components with semantic naming
+
+**UI Vernacular Development**:
+- Collaborative vocabulary for human-AI design communication
+- Clear, concise, semantically meaningful terminology
+- Consistent naming conventions for layout zones, components, and states
+- Shared understanding of spatial relationships and interaction patterns
+
+**Responsibilities**:
+- Display conversational narrative and AI responses
+- Accept player text input (dialogue, actions, questions, commands)
+- Present character information and game state as text
+- Provide access to character sheets and game settings
+- Handle session persistence and save/load functionality
+
+**Technical Implementation**:
+- CSS Grid for main layout structure (conversation area, sidebar, input zone)
+- Flexbox for component-level layouts and text flow
+- Clean, distraction-free text interface optimized for reading
+- Real-time communication with Local LLM
+- Support for formatted text (markdown, semantic HTML)
+- Keyboard-focused navigation and accessibility
+- Responsive design using grid template areas
+
+**Key Layout Zones** (Initial Vernacular):
+- **Conversation Stream**: Primary narrative and dialogue display area
+- **Input Panel**: Text entry and command interface
+- **Character Pane**: Character sheet and stats sidebar
+- **Control Strip**: Quick actions and session management
+- **Status Bar**: Connection state and system feedback
+
+### 2. Local LLM (AI GM/Companion)
+**Purpose**: Dual-role AI serving as both Game Master and interactive companion
+
+**Responsibilities**:
+- **As Game Master**: Create and narrate story scenarios, control NPCs, adjudicate rules
+- **As Companion**: Engage in character-to-character dialogue, provide emotional support and guidance
+- Process natural language roleplaying input from player
+- Generate immersive narrative responses and character interactions
+- Make tool calls to execute game mechanics when needed
+- Maintain consistent character personalities and world state
+- Balance story progression with player agency
+
+**Technical Requirements**:
+- Local LLM deployment optimized for conversational and creative tasks
+- Function calling capabilities for game mechanic workflows
+- Large context window for maintaining story continuity and character memory
+- Fine-tuning support for specific roleplaying styles and game systems
+- Prompt engineering for dual AI personality management
+
+**Dual Role Management**:
+- **GM Mode**: Objective narrator, rule arbiter, world controller
+- **Companion Mode**: Subjective character participant, emotional supporter
+- Seamless transitions between roles within single conversations
+- Distinct "voice" and personality for each mode
+- Clear delineation of when AI is speaking as GM vs. companion character
+
+### 3. n8n Workflows (Game Mechanics Engine)
+**Purpose**: Execute specific RPG mechanics, calculations, and system operations behind the scenes
+
+**Responsibilities**:
+- Process dice rolling and probability calculations for skill checks
+- Manage character statistics, health, and progression
+- Handle combat mechanics when they occur in narrative
+- Execute rule lookups and mechanical validation
+- Manage inventory, equipment, and character resources
+- Generate random encounters, loot, and procedural content
+- Track story flags, relationship values, and world state changes
+
+**Technical Requirements**:
+- Local n8n installation with webhook capabilities
+- Workflow templates for common RPG mechanics
+- Database integration for persistent character and world data
+- Custom function nodes for complex RPG calculations
+- Silent operation (player doesn't directly interact with workflows)
+
+**Workflow Categories**:
+- **Character Mechanics**: Skill checks, attribute tests, experience/leveling
+- **Narrative Tools**: Random generation, story branching, consequence tracking
+- **Combat Support**: Damage calculation, status effects, initiative when needed
+- **World Management**: Time progression, relationship tracking, story flags
+- **Resource Management**: Health, magic, inventory, currency tracking
+- **Procedural Content**: Random encounters, loot generation, NPC creation
+
+## Data Flow Architecture
+
+## Data Flow Architecture
+
+### Request Processing Flow
+1. **Player Input** → UI captures roleplaying text, dialogue, or action
+2. **UI → n8n Chat Trigger** → WebSocket message sent to n8n Chat Trigger endpoint
+3. **Chat Trigger → AI Agent** → Input passed to AI Agent node within n8n
+4. **AI Agent Processing** → AI determines response type (GM narration, companion dialogue, or mixed)
+5. **Automatic Tool Calling** → AI Agent automatically calls connected tool workflows when mechanics needed
+6. **Tool Workflow Execution** → n8n tool workflows process mechanics and return structured data
+7. **Response Integration** → AI Agent receives tool results and weaves them into narrative response
+8. **Role-Aware Response** → AI formats complete response as GM narration, companion speech, or both
+9. **Chat Trigger → UI** → Complete roleplaying response streamed back via WebSocket
+10. **Display** → UI presents the immersive text response to player
+
+### Data Persistence
+- **Character Sheets**: n8n database/files with stats, backstory, relationships
+- **Conversation Memory**: AI Agent built-in memory management for session context
+- **World State**: Tool workflows maintain story progress, NPC relationships, location details
+- **Game Settings**: n8n workflow variables for difficulty, AI personality, house rules
+- **Session Data**: Chat Trigger manages conversation sessions and continuity
+
+## Integration Specifications
+
+### UI ↔ n8n Chat Trigger Communication
+**Protocol**: WebSocket for real-time streaming communication
+**Connection**: Direct WebSocket to n8n Chat Trigger endpoint
+**Endpoint**: `ws://localhost:5678/webhook/chat` (n8n default with chat workflow)
+
+**Message Flow**:
+- **Outbound** (UI → Chat Trigger): Player input as text messages
+- **Inbound** (Chat Trigger → UI): Streaming AI responses from AI Agent
+
+**Message Format**:
+```json
+// UI to n8n - Player Input
+{
+  "action": "sendMessage",
+  "sessionId": "session_123",
+  "message": "I examine the ancient door carefully"
+}
+
+// n8n to UI - Streaming Response
+{
+  "type": "message",
+  "sessionId": "session_123", 
+  "text": "As you approach the weathered oak door...",
+  "from": "ai"
+}
+```
+
+**Built-in Features**:
+- Automatic session management by Chat Trigger
+- Real-time streaming responses from AI Agent
+- Built-in conversation memory and context retention
+- WebSocket connection handling and reconnection
+- Status indicators for AI processing state
+
+### AI Agent ↔ Tool Workflows Integration
+**Method**: Automatic tool calling via n8n AI Agent framework
+**Interface**: n8n's built-in tool connection system
+**Data Flow**: Structured tool results automatically integrated into AI responses
+
+**Tool Connection Pattern**:
+- Tools connect directly to AI Agent node as sub-nodes
+- AI Agent automatically determines when to call tools based on conversation context
+- Tool workflows return structured data that AI Agent processes
+- No manual function calling or webhook configuration required
+- Tools can chain together if AI Agent determines multiple actions needed
+
+## Security and Privacy
+
+### Local-Only Operation
+- No external API calls or cloud dependencies
+- All data remains on local machine/network
+- User has complete control over system access
+- No telemetry or usage tracking
+
+### Data Protection
+- Local file encryption options
+- User-controlled backup and restore
+- Secure session management
+- Input validation and sanitization
+
+## Scalability Considerations
+
+### Performance Optimization
+- Efficient LLM model selection for hardware capabilities
+- Workflow caching for frequently used operations
+- Optimized UI rendering for large game states
+- Database indexing for quick data retrieval
+
+### Extensibility
+- Modular workflow design for easy addition of new game systems
+- Plugin architecture for custom rules and mechanics
+- Template system for different game types (D&D, Pathfinder, etc.)
+- API design allowing for future component upgrades
+
+## Development Roadmap
+
+### Phase 1: Core Text RPG Foundation
+- Set up local LLM with conversational and creative capabilities
+- Create clean text-based UI for roleplaying conversations
+- Develop basic n8n workflows for dice rolling and simple stat checks
+- Implement character sheet creation and basic persistence
+
+### Phase 2: AI Dual-Role Development
+- Fine-tune AI personality management for GM/Companion modes
+- Implement character relationship and story memory systems
+- Add advanced RPG mechanics workflows (combat, progression, etc.)
+- Create conversation history and context management
+
+### Phase 3: Immersive Features
+- Advanced narrative generation and story branching
+- Procedural content generation workflows
+- Deep character development and relationship tracking
+- Session management and save/load functionality
+
+### Phase 4: Polish and Personalization
+- AI personality customization options
+- Performance optimization for long conversations
+- Advanced roleplaying features and house rule support
+- User experience refinements for immersive text-based play
+
+## Technical Stack Recommendations
+
+### UI Layer
+- **Web**: Simple HTML/CSS/JS with WebSocket client, or lightweight React/Vue with WebSocket
+- **Desktop**: Electron app with WebSocket connection to n8n Chat Trigger
+- **Terminal**: Command-line WebSocket client for pure text experience
+
+### n8n Layer
+- **Platform**: n8n self-hosted installation with AI Agent capabilities
+- **AI Model**: Local LLM integrated as AI Agent node (Ollama-based models recommended)
+- **Database**: n8n's built-in data storage for workflow state and character data
+- **Tools**: Custom workflow tools connected directly to AI Agent node
+
+## Success Metrics
+
+- **Immersion**: Seamless AI role transitions without breaking character
+- **Responsiveness**: Sub-3 second response times for conversational flow
+- **Consistency**: Maintained character personalities and story continuity across sessions
+- **Engagement**: AI companion that feels authentic and emotionally supportive
+- **Flexibility**: Support for multiple RPG systems and custom storytelling styles
+- **Privacy**: Complete local operation with personal story data security
+
+## Conclusion
+
+This architecture provides a focused, immersive foundation for text-based roleplaying with an AI that serves as both Game Master and companion. The clear separation between conversational AI, mechanical workflows, and user interface allows for deep character interaction while maintaining game structure. The local-only approach ensures that personal stories and character development remain completely private while providing the flexibility to customize the AI's personality and game mechanics to individual preferences.

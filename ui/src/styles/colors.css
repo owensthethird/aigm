@@ -1,0 +1,80 @@
+/* Color System CSS Variables */
+:root {
+  /* Core Background Stack */
+  --primary-background: #070b14;
+  --secondary-background: #0f1419;
+  --tertiary-background: #1a1f26;
+  --overlay-background: rgba(26, 31, 38, 0.92);
+
+  /* Administrative Context (Level 1) */
+  /* User Administrative Functions */
+  --admin-user-primary: #e11d48;
+  --admin-user-bg-alpha: rgba(225, 29, 72, 0.08);
+  --admin-user-border-alpha: rgba(225, 29, 72, 0.35);
+  --admin-user-accent: #fb7185;
+  --admin-user-shadow: 0 0 16px rgba(225, 29, 72, 0.3);
+
+  /* AI Administrative Functions */
+  --admin-ai-primary: #047857;
+  --admin-ai-bg-alpha: rgba(4, 120, 87, 0.08);
+  --admin-ai-border-alpha: rgba(4, 120, 87, 0.35);
+  --admin-ai-accent: #34d399;
+  --admin-ai-shadow: 0 0 16px rgba(4, 120, 87, 0.3);
+
+  /* Out-of-Character Context (Level 2) */
+  /* Player Meta-Communication */
+  --ooc-player-primary: #1d4ed8;
+  --ooc-player-bg-alpha: rgba(29, 78, 216, 0.08);
+  --ooc-player-border-alpha: rgba(29, 78, 216, 0.35);
+  --ooc-player-accent: #60a5fa;
+  --ooc-player-shadow: 0 0 12px rgba(29, 78, 216, 0.25);
+
+  /* AI Meta-Communication */
+  --ooc-ai-primary: #ea580c;
+  --ooc-ai-bg-alpha: rgba(234, 88, 12, 0.08);
+  --ooc-ai-border-alpha: rgba(234, 88, 12, 0.35);
+  --ooc-ai-accent: #fb923c;
+  --ooc-ai-shadow: 0 0 12px rgba(234, 88, 12, 0.25);
+
+  /* In-Character Context (Level 3) */
+  /* Player Narrative Actions */
+  --ic-player-primary: #16a34a;
+  --ic-player-bg-alpha: rgba(22, 163, 74, 0.08);
+  --ic-player-border-alpha: rgba(22, 163, 74, 0.35);
+  --ic-player-accent: #4ade80;
+  --ic-player-shadow: 0 0 10px rgba(22, 163, 74, 0.2);
+
+  /* AI Narrative Responses */
+  --ic-ai-primary: #c026d3;
+  --ic-ai-bg-alpha: rgba(192, 38, 211, 0.08);
+  --ic-ai-border-alpha: rgba(192, 38, 211, 0.35);
+  --ic-ai-accent: #e879f9;
+  --ic-ai-shadow: 0 0 10px rgba(192, 38, 211, 0.2);
+
+  /* System State Color Definitions */
+  --active-state-from: #8b5fbf;
+  --active-state-to: #a855f7;
+  --processing-state-from: #4338ca;
+  --processing-state-to: #6366f1;
+  --success-state-from: #059669;
+  --success-state-to: #10b981;
+  --warning-state-from: #d97706;
+  --warning-state-to: #f59e0b;
+  --error-state-from: #dc2626;
+  --error-state-to: #ef4444;
+  --idle-state-from: #475569;
+  --idle-state-to: #64748b;
+
+  /* System Accent Colors */
+  --highlight-accent: #d8b4fe;
+  --focus-accent: #fde047;
+  --info-accent: #7dd3fc;
+  --neutral-accent: #94a3b8;
+  --success-accent: #34d399;
+
+  /* Text Colors */
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-tertiary: #64748b;
+  --text-disabled: #475569;
+}
