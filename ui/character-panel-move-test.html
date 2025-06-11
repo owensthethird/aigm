@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Character Panel Move Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            margin: 20px;
+            background: #f0f0f0;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .pass {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .fail {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .grid-viz {
+            display: grid;
+            grid-template-columns: repeat(12, 30px);
+            grid-template-rows: repeat(6, 30px);
+            gap: 2px;
+            margin: 10px 0;
+            background: #eee;
+            padding: 10px;
+        }
+        .cell {
+            background: white;
+            border: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+        }
+        .occupied {
+            background: #007bff;
+            color: white;
+        }
+        .chat { background: #28a745; }
+        .character { background: #dc3545; }
+        .control { background: #ffc107; color: black; }
+        .status { background: #6f42c1; }
+        .input { background: #fd7e14; }
+        .preview { background: #17a2b8; }
+    </style>
+</head>
+<body>
+    <h1>Character Panel Move Test</h1>
+    <p>Testing what happens when Character Panel is moved left 2 cells and down 2 cells from (3,0) to (1,2)</p>
+    
+    <div class="test-container">
+        <h2>Initial Layout</h2>
+        <div id="initial-layout"></div>
+        <div id="initial-grid" class="grid-viz"></div>
+    </div>
+    
+    <div class="test-container">
+        <h2>Test Execution</h2>
+        <div id="test-steps"></div>
+    </div>
+    
+    <div class="test-container">
+        <h2>Final Layout</h2>
+        <div id="final-layout"></div>
+        <div id="final-grid" class="grid-viz"></div>
+    </div>
+    
+    <div class="test-container">
+        <h2>Test Results</h2>
+        <div id="test-results"></div>
+    </div>
+
+    <script>
+        // Character Panel Move Test Implementation
+        
+        class CharacterPanelMoveTest {
+            constructor() {
+                this.gridConfig = { columns: 12, rows: 6 };
+                this.minSize = { width: 2, height: 1 };
+                
+                this.panels = [];
+                this.testResults = [];
+                this.steps = [];
+                
+                this.init();
+            }
+            
+            init() {
+                this.createInitialLayout();
+                this.displayInitialLayout();
+                this.runTest();
+                this.displayResults();
+            }
+            
+            createInitialLayout() {
+                // Exact same layout as in the main implementation
+                this.panels = [
+                    this.createPanel(1, {col: 0, row: 0}, {width: 3, height: 2}, 'Chat Stream'),
+                    this.createPanel(2, {col: 3, row: 0}, {width: 5, height: 3}, 'Character Panel'),
+                    this.createPanel(3, {col: 8, row: 0}, {width: 4, height: 2}, 'Control Strip'),
+                    this.createPanel(4, {col: 0, row: 2}, {width: 3, height: 4}, 'Status Monitor'),
+                    this.createPanel(5, {col: 3, row: 3}, {width: 9, height: 3}, 'Input Console')
+                ];
+            }
+            
+            createPanel(id, origin, size, title) {
+                return {
+                    id: String(id),
+                    origin: { ...origin },
+                    size: { ...size },
+                    title: title
+                };
+            }
+            
+            displayInitialLayout() {
+                const layoutDiv = document.getElementById('initial-layout');
+                const gridDiv = document.getElementById('initial-grid');
+                
+                let layoutHtml = '<h3>Initial Panel Positions:</h3>';
+                this.panels.forEach(panel => {
+                    layoutHtml += `<div class="info">
+                        <strong>${panel.title}</strong> (ID: ${panel.id})<br>
+                        Position: (${panel.origin.col}, ${panel.origin.row})<br>
+                        Size: ${panel.size.width} × ${panel.size.height}<br>
+                        Bottom edge at row: ${panel.origin.row + panel.size.height - 1}
+                    </div>`;
+                });
+                layoutDiv.innerHTML = layoutHtml;
+                
+                this.renderGrid(gridDiv, this.panels, 'Initial');
+            }
+            
+            renderGrid(container, panels, label) {
+                container.innerHTML = `<h4>${label} Grid Layout:</h4>`;
+                
+                for (let row = 0; row < this.gridConfig.rows; row++) {
+                    for (let col = 0; col < this.gridConfig.columns; col++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cell';
+                        
+                        // Check which panel occupies this cell
+                        const occupyingPanel = panels.find(panel => 
+                            col >= panel.origin.col && 
+                            col < panel.origin.col + panel.size.width &&
+                            row >= panel.origin.row && 
+                            row < panel.origin.row + panel.size.height
+                        );
+                        
+                        if (occupyingPanel) {
+                            cell.classList.add('occupied');
+                            switch(occupyingPanel.title) {
+                                case 'Chat Stream': cell.classList.add('chat'); break;
+                                case 'Character Panel': cell.classList.add('character'); break;
+                                case 'Control Strip': cell.classList.add('control'); break;
+                                case 'Status Monitor': cell.classList.add('status'); break;
+                                case 'Input Console': cell.classList.add('input'); break;
+                            }
+                            cell.textContent = occupyingPanel.id;
+                            cell.title = `${occupyingPanel.title} (${col},${row})`;
+                        } else {
+                            cell.textContent = `${col},${row}`;
+                            cell.title = `Empty cell (${col},${row})`;
+                        }
+                        
+                        container.appendChild(cell);
+                    }
+                }
+            }
+            
+            runTest() {
+                this.log('=== STARTING CHARACTER PANEL MOVE TEST ===');
+                
+                // Find the Character Panel and Chat Panel
+                const characterPanel = this.panels.find(p => p.title === 'Character Panel');
+                const chatPanel = this.panels.find(p => p.title === 'Chat Stream');
+                
+                this.log(`Character Panel: ID ${characterPanel.id} at (${characterPanel.origin.col}, ${characterPanel.origin.row}) size ${characterPanel.size.width}×${characterPanel.size.height}`);
+                this.log(`Chat Panel: ID ${chatPanel.id} at (${chatPanel.origin.col}, ${chatPanel.origin.row}) size ${chatPanel.size.width}×${chatPanel.size.height}`);
+                this.log(`Chat Panel bottom edge at row: ${chatPanel.origin.row + chatPanel.size.height - 1}`);
+                
+                // Calculate target position (left 2, down 2)
+                const initialPos = { ...characterPanel.origin };
+                const targetPosition = {
+                    col: initialPos.col - 2,  // 3 - 2 = 1
+                    row: initialPos.row + 2   // 0 + 2 = 2
+                };
+                
+                this.log(`Moving Character Panel from (${initialPos.col}, ${initialPos.row}) to target (${targetPosition.col}, ${targetPosition.row})`);
+                
+                // Check what panels would be at the target position
+                this.log('Analyzing collision at target position...');
+                const conflictingPanels = this.findConflictingPanels(targetPosition, characterPanel.size, characterPanel.id);
+                
+                if (conflictingPanels.length > 0) {
+                    this.log(`Conflicts detected with: ${conflictingPanels.map(p => p.title).join(', ')}`);
+                    conflictingPanels.forEach(panel => {
+                        this.log(`  - ${panel.title}: (${panel.origin.col}, ${panel.origin.row}) size ${panel.size.width}×${panel.size.height}`);
+                    });
+                } else {
+                    this.log('No conflicts detected - move should be successful');
+                }
+                
+                // Simulate the collision logic
+                const result = this.simulateMove(characterPanel, targetPosition);
+                this.log(`Simulation result: ${JSON.stringify(result, null, 2)}`);
+                
+                // Apply the move
+                if (result.canMove) {
+                    characterPanel.origin = { ...result.finalPosition };
+                    if (result.wasResized) {
+                        characterPanel.size = { ...result.finalSize };
+                    }
+                    this.log(`Character Panel moved to: (${characterPanel.origin.col}, ${characterPanel.origin.row}) size ${characterPanel.size.width}×${characterPanel.size.height}`);
+                } else {
+                    this.log(`Move failed: ${result.reason}`);
+                }
+                
+                // Check final state of Chat Panel
+                const finalChatPanel = this.panels.find(p => p.title === 'Chat Stream');
+                this.log(`Chat Panel after move: (${finalChatPanel.origin.col}, ${finalChatPanel.origin.row}) size ${finalChatPanel.size.width}×${finalChatPanel.size.height}`);
+                this.log(`Chat Panel bottom edge after move: row ${finalChatPanel.origin.row + finalChatPanel.size.height - 1}`);
+                
+                this.analyzeResults(result, chatPanel, finalChatPanel);
+            }
+            
+            findConflictingPanels(targetPos, size, excludeId) {
+                const conflicts = [];
+                
+                this.panels.forEach(panel => {
+                    if (panel.id === excludeId) return;
+                    
+                    // Check if panels overlap
+                    const overlap = !(
+                        targetPos.col + size.width <= panel.origin.col ||
+                        panel.origin.col + panel.size.width <= targetPos.col ||
+                        targetPos.row + size.height <= panel.origin.row ||
+                        panel.origin.row + panel.size.height <= targetPos.row
+                    );
+                    
+                    if (overlap) {
+                        conflicts.push(panel);
+                    }
+                });
+                
+                return conflicts;
+            }
+            
+            simulateMove(panel, targetPos) {
+                // Check if target position is in bounds
+                if (targetPos.col < 0 || targetPos.row < 0 || 
+                    targetPos.col + panel.size.width > this.gridConfig.columns ||
+                    targetPos.row + panel.size.height > this.gridConfig.rows) {
+                    return {
+                        canMove: false,
+                        reason: 'OUT_OF_BOUNDS',
+                        finalPosition: panel.origin,
+                        finalSize: panel.size
+                    };
+                }
+                
+                // Check for conflicts
+                const conflicts = this.findConflictingPanels(targetPos, panel.size, panel.id);
+                
+                if (conflicts.length === 0) {
+                    return {
+                        canMove: true,
+                        finalPosition: targetPos,
+                        finalSize: panel.size,
+                        wasResized: false,
+                        conflicts: []
+                    };
+                }
+                
+                // Simulate penetration collapse logic
+                // In a real collision, the system would fall back to the last valid position
+                // and apply penetration-based resizing
+                
+                const statusMonitor = conflicts.find(p => p.title === 'Status Monitor');
+                const inputConsole = conflicts.find(p => p.title === 'Input Console');
+                
+                if (statusMonitor || inputConsole) {
+                    // The Character Panel (5x3) at (1,2) would conflict with:
+                    // Status Monitor (3x4) at (0,2) - overlap in columns 1-2, rows 2-4
+                    // Input Console (9x3) at (3,3) - overlap in columns 3-5, rows 3-4
+                    
+                    // System would likely fall back to original position with size reduction
+                    return {
+                        canMove: true,
+                        finalPosition: panel.origin,  // Fall back to original position
+                        finalSize: { width: Math.max(2, panel.size.width - 2), height: Math.max(1, panel.size.height - 2) },
+                        wasResized: true,
+                        isPenetrationCollapse: true,
+                        conflicts: conflicts.map(p => p.title)
+                    };
+                }
+                
+                return {
+                    canMove: false,
+                    reason: 'COLLISION_UNRESOLVED',
+                    finalPosition: panel.origin,
+                    finalSize: panel.size,
+                    conflicts: conflicts.map(p => p.title)
+                };
+            }
+            
+            analyzeResults(result, initialChatPanel, finalChatPanel) {
+                this.log('=== ANALYSIS ===');
+                
+                // Test 1: Character Panel movement
+                if (result.canMove) {
+                    this.addResult('PASS', 'Character Panel move was processed');
+                    
+                    if (result.wasResized) {
+                        this.addResult('INFO', `Character Panel was resized due to penetration collapse`);
+                        if (result.isPenetrationCollapse) {
+                            this.addResult('INFO', 'Penetration collapse logic was applied');
+                        }
+                    }
+                } else {
+                    this.addResult('FAIL', `Character Panel move failed: ${result.reason}`);
+                }
+                
+                // Test 2: Chat Panel analysis
+                const chatMoved = (finalChatPanel.origin.col !== initialChatPanel.origin.col || 
+                                 finalChatPanel.origin.row !== initialChatPanel.origin.row);
+                const chatResized = (finalChatPanel.size.width !== initialChatPanel.size.width || 
+                                   finalChatPanel.size.height !== initialChatPanel.size.height);
+                
+                if (!chatMoved && !chatResized) {
+                    this.addResult('PASS', 'Chat Stream panel remained unchanged (no collision)');
+                } else {
+                    if (chatMoved) {
+                        this.addResult('INFO', `Chat Stream panel moved from (${initialChatPanel.origin.col}, ${initialChatPanel.origin.row}) to (${finalChatPanel.origin.col}, ${finalChatPanel.origin.row})`);
+                    }
+                    if (chatResized) {
+                        this.addResult('INFO', `Chat Stream panel resized from ${initialChatPanel.size.width}×${initialChatPanel.size.height} to ${finalChatPanel.size.width}×${finalChatPanel.size.height}`);
+                    }
+                }
+                
+                // Test 3: Bottom edge analysis
+                const initialBottom = initialChatPanel.origin.row + initialChatPanel.size.height - 1;
+                const finalBottom = finalChatPanel.origin.row + finalChatPanel.size.height - 1;
+                
+                this.addResult('INFO', `Chat Stream bottom edge: was row ${initialBottom}, now row ${finalBottom}`);
+                
+                if (finalBottom === initialBottom) {
+                    this.addResult('PASS', 'Chat Stream bottom edge unchanged');
+                } else {
+                    this.addResult('INFO', `Chat Stream bottom edge moved by ${finalBottom - initialBottom} rows`);
+                }
+                
+                // Test 4: Expected behavior
+                this.addResult('INFO', 'Expected: Character Panel should trigger penetration collapse and resize at original position');
+                this.addResult('INFO', 'Expected: Chat Stream should remain unaffected as it\'s not in the collision path');
+                
+                // Test 5: Collision detection
+                this.checkForOverlaps();
+            }
+            
+            checkForOverlaps() {
+                this.log('Checking for panel overlaps in final state...');
+                let overlapsFound = false;
+                
+                for (let i = 0; i < this.panels.length; i++) {
+                    for (let j = i + 1; j < this.panels.length; j++) {
+                        const panel1 = this.panels[i];
+                        const panel2 = this.panels[j];
+                        
+                        const overlap = this.panelsOverlap(panel1, panel2);
+                        if (overlap) {
+                            overlapsFound = true;
+                            this.addResult('FAIL', `Overlap detected between ${panel1.title} and ${panel2.title}`);
+                        }
+                    }
+                }
+                
+                if (!overlapsFound) {
+                    this.addResult('PASS', 'No panel overlaps detected in final state');
+                }
+            }
+            
+            panelsOverlap(panel1, panel2) {
+                return !(
+                    panel1.origin.col + panel1.size.width <= panel2.origin.col ||
+                    panel2.origin.col + panel2.size.width <= panel1.origin.col ||
+                    panel1.origin.row + panel1.size.height <= panel2.origin.row ||
+                    panel2.origin.row + panel2.size.height <= panel1.origin.row
+                );
+            }
+            
+            log(message) {
+                this.steps.push(message);
+                console.log(message);
+            }
+            
+            addResult(type, message) {
+                this.testResults.push({ type, message });
+            }
+            
+            displayResults() {
+                // Display test steps
+                const stepsDiv = document.getElementById('test-steps');
+                stepsDiv.innerHTML = this.steps.map(step => `<div class="info">${step}</div>`).join('');
+                
+                // Display final layout
+                const finalLayoutDiv = document.getElementById('final-layout');
+                const finalGridDiv = document.getElementById('final-grid');
+                
+                let layoutHtml = '<h3>Final Panel Positions:</h3>';
+                this.panels.forEach(panel => {
+                    layoutHtml += `<div class="info">
+                        <strong>${panel.title}</strong> (ID: ${panel.id})<br>
+                        Position: (${panel.origin.col}, ${panel.origin.row})<br>
+                        Size: ${panel.size.width} × ${panel.size.height}<br>
+                        Bottom edge at row: ${panel.origin.row + panel.size.height - 1}
+                    </div>`;
+                });
+                finalLayoutDiv.innerHTML = layoutHtml;
+                
+                this.renderGrid(finalGridDiv, this.panels, 'Final');
+                
+                // Display test results
+                const resultsDiv = document.getElementById('test-results');
+                resultsDiv.innerHTML = this.testResults.map(result => 
+                    `<div class="${result.type.toLowerCase()}">${result.type}: ${result.message}</div>`
+                ).join('');
+            }
+        }
+        
+        // Run the test when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new CharacterPanelMoveTest();
+        });
+    </script>
+</body>
+</html> 

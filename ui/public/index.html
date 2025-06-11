@@ -1,23 +1,1011 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#070b14" />
-    <meta
-      name="description"
-      content="AI Game Master - Interactive storytelling for tabletop role-playing games"
-    />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <title>AI Game Master</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Game Master - Grid Dashboard</title>
+    <style>
+        :root {
+            --columns: 12;
+            --rows: 6;
+            --gap: 8px;
+            --grid-height: calc(100vh - 80px);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: system-ui, sans-serif;
+            background: #f5f5f5;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .controls {
+            height: 60px;
+            padding: 16px;
+            background: white;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        button {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover { background: #f0f0f0; }
+
+        .grid-container {
+            position: relative;
+            height: var(--grid-height);
+            padding: 16px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(var(--columns), 1fr);
+            grid-template-rows: repeat(var(--rows), 1fr);
+            gap: var(--gap);
+            height: 100%;
+            position: relative;
+        }
+
+        .grid-background {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            grid-template-columns: repeat(var(--columns), 1fr);
+            grid-template-rows: repeat(var(--rows), 1fr);
+            gap: var(--gap);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .grid-cell {
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 4px;
+            position: relative;
+        }
+
+        .cell-label {
+            position: absolute;
+            top: 2px;
+            left: 4px;
+            font-size: 10px;
+            color: rgba(0,0,0,0.4);
+        }
+
+        .panel {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 1;
+            transition: box-shadow 0.2s ease;
+            position: relative;
+        }
+
+        .panel:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+
+        .panel.dragging {
+            z-index: 100;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            transform: rotate(1deg);
+            transition: none;
+        }
+
+        .panel-header {
+            background: #f8f9fa;
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            cursor: grab;
+            font-weight: 600;
+            user-select: none;
+        }
+
+        .panel-header:active { cursor: grabbing; }
+
+        .panel-content {
+            flex: 1;
+            padding: 16px;
+            overflow: auto;
+        }
+
+        .drop-preview {
+            position: absolute;
+            background: rgba(59, 130, 246, 0.3);
+            border: 2px dashed #3b82f6;
+            border-radius: 4px;
+            pointer-events: none;
+            z-index: 50;
+            transition: all 0.15s ease;
+        }
+
+        .drop-preview.invalid {
+            background: rgba(239, 68, 68, 0.3);
+            border-color: #ef4444;
+        }
+
+        .drop-preview.resized {
+            border-style: dotted;
+            background: rgba(168, 85, 247, 0.3);
+            border-color: #a855f7;
+        }
+
+        .resize-handle {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            width: 20px;
+            height: 20px;
+            cursor: nw-resize;
+            background: linear-gradient(-45deg, transparent 30%, #999 40%, transparent 50%, #999 60%, transparent 70%);
+            background-size: 8px 8px;
+            z-index: 100;
+            border-radius: 0 0 4px 0;
+        }
+
+        .resize-handle:hover {
+            background-color: rgba(59, 130, 246, 0.1);
+            background-image: linear-gradient(-45deg, transparent 30%, #3b82f6 40%, transparent 50%, #3b82f6 60%, transparent 70%);
+        }
+    </style>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
+    <div class="controls">
+        <button id="add-panel">Add Panel</button>
+        <button id="save">Save Layout</button>
+        <button id="load">Load Layout</button>
+        <button id="export-json">Export JSON</button>
+        <input type="file" id="import-json" accept=".json" style="display: none;">
+        <button id="import-json-btn">Import JSON</button>
+        <button id="clear">Clear All</button>
+    </div>
+
+    <div class="grid-container">
+        <div class="grid" id="grid">
+            <div class="grid-background" id="background"></div>
+        </div>
+    </div>
+
+    <script>
+        // ================================================
+        // FUNCTIONAL GRID PANEL SYSTEM
+        // ================================================
+
+        function getCursorGridPosition(mouseX, mouseY, gridRect, cellWidth, cellHeight, dragOffset) {
+            const relativeX = mouseX - gridRect.left - dragOffset.x;
+            const relativeY = mouseY - gridRect.top - dragOffset.y;
+            
+            return {
+                col: Math.round(relativeX / cellWidth),
+                row: Math.round(relativeY / cellHeight)
+            };
+        }
+
+        function isOriginOccupied(origin, allPanels, excludePanelId) {
+            return allPanels.some(panel => {
+                if (panel.id === excludePanelId) return false;
+                
+                return origin.col >= panel.origin.col && 
+                       origin.col < panel.origin.col + panel.size.width &&
+                       origin.row >= panel.origin.row && 
+                       origin.row < panel.origin.row + panel.size.height;
+            });
+        }
+
+        function calculatePenetrationDepth(hypotheticalOrigin, actualOrigin) {
+            return {
+                colPenetration: Math.abs(hypotheticalOrigin.col - actualOrigin.col),
+                rowPenetration: Math.abs(hypotheticalOrigin.row - actualOrigin.row),
+                hasColDifference: hypotheticalOrigin.col !== actualOrigin.col,
+                hasRowDifference: hypotheticalOrigin.row !== actualOrigin.row
+            };
+        }
+
+        function applyPenetrationCollapse(fallbackOrigin, initialArea, penetrationData, minSize) {
+            let collapsedArea = { ...initialArea };
+            
+            if (penetrationData.hasColDifference && penetrationData.colPenetration > 0) {
+                collapsedArea.width = Math.max(minSize.width, initialArea.width - penetrationData.colPenetration);
+            }
+            
+            if (penetrationData.hasRowDifference && penetrationData.rowPenetration > 0) {
+                collapsedArea.height = Math.max(minSize.height, initialArea.height - penetrationData.rowPenetration);
+            }
+            
+            return collapsedArea;
+        }
+
+        function hasEdgeCollisions(origin, area, allPanels, excludePanelId, gridConfig) {
+            if (origin.col < 0 || origin.row < 0 || 
+                origin.col + area.width > gridConfig.columns ||
+                origin.row + area.height > gridConfig.rows) {
+                return true;
+            }
+            
+            for (let col = origin.col; col < origin.col + area.width; col++) {
+                for (let row = origin.row; row < origin.row + area.height; row++) {
+                    if (isCellOccupied(col, row, allPanels, excludePanelId)) {
+                        return true;
+                    }
+                }
+            }
+            
+            return false;
+        }
+
+        function isCellOccupied(col, row, allPanels, excludePanelId) {
+            return allPanels.some(panel => {
+                if (panel.id === excludePanelId) return false;
+                
+                return col >= panel.origin.col && 
+                       col < panel.origin.col + panel.size.width &&
+                       row >= panel.origin.row && 
+                       row < panel.origin.row + panel.size.height;
+            });
+        }
+
+        function getMovementDirection(initialOrigin, hypotheticalOrigin) {
+            const deltaCol = hypotheticalOrigin.col - initialOrigin.col;
+            const deltaRow = hypotheticalOrigin.row - initialOrigin.row;
+            
+            if (Math.abs(deltaCol) > Math.abs(deltaRow)) {
+                return deltaCol > 0 ? 'RIGHT' : 'LEFT';
+            } else {
+                return deltaRow > 0 ? 'DOWN' : 'UP';
+            }
+        }
+
+        function collapseFromLeadingEdge(origin, initialArea, movementDirection, allPanels, excludePanelId, gridConfig, minSize) {
+            let hypotheticalArea = { ...initialArea };
+            
+            switch(movementDirection) {
+                case 'LEFT':
+                case 'RIGHT':
+                    while (hypotheticalArea.width >= minSize.width) {
+                        if (!hasEdgeCollisions(origin, hypotheticalArea, allPanels, excludePanelId, gridConfig)) {
+                            return hypotheticalArea;
+                        }
+                        hypotheticalArea.width--;
+                    }
+                    break;
+                    
+                case 'UP':
+                case 'DOWN':
+                    while (hypotheticalArea.height >= minSize.height) {
+                        if (!hasEdgeCollisions(origin, hypotheticalArea, allPanels, excludePanelId, gridConfig)) {
+                            return hypotheticalArea;
+                        }
+                        hypotheticalArea.height--;
+                    }
+                    break;
+            }
+            
+            return null;
+        }
+
+        function calculatePanelPosition(
+            mousePosition, gridRect, cellDimensions, dragOffset, initialOrigin, initialArea,
+            lastValidOrigin, allPanels, excludePanelId, gridConfig, minSize = { width: 2, height: 1 }
+        ) {
+            const rawCursorPosition = getCursorGridPosition(
+                mousePosition.x, mousePosition.y, gridRect, 
+                cellDimensions.width, cellDimensions.height, dragOffset
+            );
+            
+            const hypotheticalOrigin = {
+                col: Math.max(0, Math.min(rawCursorPosition.col, gridConfig.columns - 1)),
+                row: Math.max(0, Math.min(rawCursorPosition.row, gridConfig.rows - 1))
+            };
+            
+            const movementDirection = getMovementDirection(initialOrigin, hypotheticalOrigin);
+            
+            if (!hasEdgeCollisions(hypotheticalOrigin, initialArea, allPanels, excludePanelId, gridConfig)) {
+                return {
+                    isValid: true,
+                    origin: hypotheticalOrigin,
+                    size: initialArea,
+                    displayOrigin: hypotheticalOrigin,
+                    displaySize: initialArea,
+                    isResized: false,
+                    newValidOrigin: hypotheticalOrigin
+                };
+            }
+            
+            const targetCollapsedArea = collapseFromLeadingEdge(
+                hypotheticalOrigin, initialArea, movementDirection,
+                allPanels, excludePanelId, gridConfig, minSize
+            );
+            
+            if (targetCollapsedArea) {
+                return {
+                    isValid: true,
+                    origin: hypotheticalOrigin,
+                    size: targetCollapsedArea,
+                    displayOrigin: hypotheticalOrigin,
+                    displaySize: targetCollapsedArea,
+                    isResized: true,
+                    movementDirection,
+                    newValidOrigin: hypotheticalOrigin
+                };
+            }
+            
+            // Fallback to penetration collapse at last valid position
+            const fallbackOrigin = lastValidOrigin || initialOrigin;
+            const penetrationData = calculatePenetrationDepth(hypotheticalOrigin, fallbackOrigin);
+            
+            const penetrationCollapsedArea = applyPenetrationCollapse(
+                fallbackOrigin, initialArea, penetrationData, minSize
+            );
+            
+            if (!hasEdgeCollisions(fallbackOrigin, penetrationCollapsedArea, allPanels, excludePanelId, gridConfig)) {
+                return {
+                    isValid: true,
+                    origin: fallbackOrigin,
+                    size: penetrationCollapsedArea,
+                    displayOrigin: fallbackOrigin,
+                    displaySize: penetrationCollapsedArea,
+                    isResized: true,
+                    isPenetrationCollapse: true,
+                    penetrationData: penetrationData,
+                    movementDirection
+                };
+            }
+            
+            const furtherCollapsedArea = collapseFromLeadingEdge(
+                fallbackOrigin, penetrationCollapsedArea, movementDirection,
+                allPanels, excludePanelId, gridConfig, minSize
+            );
+            
+            if (furtherCollapsedArea) {
+                return {
+                    isValid: true,
+                    origin: fallbackOrigin,
+                    size: furtherCollapsedArea,
+                    displayOrigin: fallbackOrigin,
+                    displaySize: furtherCollapsedArea,
+                    isResized: true,
+                    isPenetrationCollapse: true,
+                    penetrationData: penetrationData,
+                    movementDirection
+                };
+            }
+            
+            return {
+                isValid: false,
+                reason: 'PENETRATION_COLLAPSE_FAILED',
+                origin: hypotheticalOrigin,
+                size: initialArea
+            };
+            
+            return {
+                isValid: false,
+                reason: 'NO_SPACE_AVAILABLE',
+                origin: hypotheticalOrigin,
+                size: initialArea
+            };
+        }
+
+        function updatePanelInArray(panels, panelId, newOrigin, newSize) {
+            return panels.map(panel => 
+                panel.id === panelId 
+                    ? { ...panel, origin: newOrigin, size: newSize }
+                    : panel
+            );
+        }
+
+        function findEmptySpace(allPanels, gridConfig, desiredSize = { width: 2, height: 2 }) {
+            for (let row = 0; row <= gridConfig.rows - desiredSize.height; row++) {
+                for (let col = 0; col <= gridConfig.columns - desiredSize.width; col++) {
+                    const testOrigin = { col, row };
+                    if (!hasEdgeCollisions(testOrigin, desiredSize, allPanels, null, gridConfig)) {
+                        return testOrigin;
+                    }
+                }
+            }
+            return null;
+        }
+
+        function createPanel(id, origin, size, title, content) {
+            return {
+                id: String(id),
+                origin: { ...origin },
+                size: { ...size },
+                title: title || `Panel ${id}`,
+                content: content || `Content for panel ${id}`
+            };
+        }
+
+        function handlePanelDrag(mouseEvent, dragContext) {
+            const result = calculatePanelPosition(
+                { x: mouseEvent.clientX, y: mouseEvent.clientY },
+                dragContext.gridRect, dragContext.cellDimensions, dragContext.dragOffset,
+                dragContext.initialOrigin, dragContext.initialArea, dragContext.lastValidOrigin,
+                dragContext.allPanels, dragContext.panelId, dragContext.gridConfig
+            );
+            
+            return {
+                origin: result.origin,
+                size: result.size,
+                isValid: result.isValid,
+                isResized: result.isResized,
+                canDrop: result.isValid,
+                reason: result.reason,
+                movementDirection: result.movementDirection,
+                isPenetrationCollapse: result.isPenetrationCollapse,
+                penetrationData: result.penetrationData,
+                newValidOrigin: result.newValidOrigin,
+                displayOrigin: result.displayOrigin,
+                displaySize: result.displaySize
+            };
+        }
+
+        function handlePanelRelease(dragResult, allPanels, panelId) {
+            if (dragResult.canDrop) {
+                const storeOrigin = dragResult.displayOrigin || dragResult.origin;
+                const storeSize = dragResult.displaySize || dragResult.size;
+                
+                return updatePanelInArray(allPanels, panelId, storeOrigin, storeSize);
+            } else {
+                return allPanels;
+            }
+        }
+
+        function calculateHypotheticalResizeOrigin(mousePosition, gridRect, cellDimensions) {
+            const relativeX = mousePosition.x - gridRect.left;
+            const relativeY = mousePosition.y - gridRect.top;
+            
+            const mouseCol = relativeX / cellDimensions.width;
+            const mouseRow = relativeY / cellDimensions.height;
+            
+            return {
+                col: Math.round(mouseCol),
+                row: Math.round(mouseRow)
+            };
+        }
+
+        function calculateHypotheticalSize(panelOrigin, hypotheticalResizeOrigin, minSize, gridConfig) {
+            let hypotheticalWidth = hypotheticalResizeOrigin.col - panelOrigin.col;
+            let hypotheticalHeight = hypotheticalResizeOrigin.row - panelOrigin.row;
+            
+            hypotheticalWidth = Math.max(minSize.width, hypotheticalWidth);
+            hypotheticalHeight = Math.max(minSize.height, hypotheticalHeight);
+            
+            const maxWidth = gridConfig.columns - panelOrigin.col;
+            const maxHeight = gridConfig.rows - panelOrigin.row;
+            hypotheticalWidth = Math.min(hypotheticalWidth, maxWidth);
+            hypotheticalHeight = Math.min(hypotheticalHeight, maxHeight);
+            
+            return { width: hypotheticalWidth, height: hypotheticalHeight };
+        }
+
+        function applyResizeCollisionLogic(panelOrigin, hypotheticalSize, allPanels, excludePanelId, gridConfig, lastValidSize) {
+            if (!hasEdgeCollisions(panelOrigin, hypotheticalSize, allPanels, excludePanelId, gridConfig)) {
+                return {
+                    size: hypotheticalSize,
+                    isValid: true,
+                    isCollapsed: false,
+                    collapseType: null
+                };
+            }
+            
+            let collapsedWidth = hypotheticalSize.width;
+            while (collapsedWidth >= 1) {
+                const widthCollapsedSize = { width: collapsedWidth, height: hypotheticalSize.height };
+                if (!hasEdgeCollisions(panelOrigin, widthCollapsedSize, allPanels, excludePanelId, gridConfig)) {
+                    return {
+                        size: widthCollapsedSize,
+                        isValid: true,
+                        isCollapsed: true,
+                        collapseType: 'WIDTH'
+                    };
+                }
+                collapsedWidth--;
+            }
+            
+            let collapsedHeight = hypotheticalSize.height;
+            while (collapsedHeight >= 1) {
+                const heightCollapsedSize = { width: hypotheticalSize.width, height: collapsedHeight };
+                if (!hasEdgeCollisions(panelOrigin, heightCollapsedSize, allPanels, excludePanelId, gridConfig)) {
+                    return {
+                        size: heightCollapsedSize,
+                        isValid: true,
+                        isCollapsed: true,
+                        collapseType: 'HEIGHT'
+                    };
+                }
+                collapsedHeight--;
+            }
+            
+            for (let w = hypotheticalSize.width; w >= 1; w--) {
+                for (let h = hypotheticalSize.height; h >= 1; h--) {
+                    const bothCollapsedSize = { width: w, height: h };
+                    if (!hasEdgeCollisions(panelOrigin, bothCollapsedSize, allPanels, excludePanelId, gridConfig)) {
+                        return {
+                            size: bothCollapsedSize,
+                            isValid: true,
+                            isCollapsed: true,
+                            collapseType: 'BOTH'
+                        };
+                    }
+                }
+            }
+            
+            return {
+                size: lastValidSize,
+                isValid: false,
+                isCollapsed: false,
+                collapseType: 'FALLBACK',
+                reason: 'NO_VALID_SIZE'
+            };
+        }
+
+        function handlePanelResize(mouseEvent, resizeContext) {
+            const hypotheticalResizeOrigin = calculateHypotheticalResizeOrigin(
+                { x: mouseEvent.clientX, y: mouseEvent.clientY },
+                resizeContext.gridRect, resizeContext.cellDimensions
+            );
+            
+            const hypotheticalSize = calculateHypotheticalSize(
+                resizeContext.panelOrigin, hypotheticalResizeOrigin,
+                resizeContext.minSize, resizeContext.gridConfig
+            );
+            
+            const collisionResult = applyResizeCollisionLogic(
+                resizeContext.panelOrigin, hypotheticalSize, resizeContext.allPanels,
+                resizeContext.panelId, resizeContext.gridConfig, resizeContext.lastValidSize
+            );
+            
+            return {
+                panelOrigin: resizeContext.panelOrigin,
+                hypotheticalResizeOrigin: hypotheticalResizeOrigin,
+                hypotheticalSize: hypotheticalSize,
+                size: collisionResult.size,
+                isValid: collisionResult.isValid,
+                canDrop: true,
+                isResize: true,
+                isCollapsed: collisionResult.isCollapsed,
+                collapseType: collisionResult.collapseType,
+                reason: collisionResult.reason
+            };
+        }
+
+        function handleResizeRelease(resizeResult, allPanels, panelId) {
+            return updatePanelInArray(allPanels, panelId, resizeResult.panelOrigin, resizeResult.size);
+        }
+
+        class GridDashboard {
+            constructor() {
+                this.grid = document.getElementById('grid');
+                this.background = document.getElementById('background');
+                this.panels = [];
+                this.panelCounter = 0;
+                this.dragContext = null;
+                this.resizeContext = null;
+                this.gridConfig = { columns: 12, rows: 6 };
+                this.minSize = { width: 2, height: 1 };
+                
+                this.init();
+            }
+
+            init() {
+                this.createBackground();
+                this.setupEventListeners();
+                this.createSamplePanels();
+            }
+
+            createBackground() {
+                this.background.innerHTML = '';
+                for (let row = 0; row < this.gridConfig.rows; row++) {
+                    for (let col = 0; col < this.gridConfig.columns; col++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'grid-cell';
+                        cell.innerHTML = `<div class="cell-label">${col + 1},${row + 1}</div>`;
+                        this.background.appendChild(cell);
+                    }
+                }
+            }
+
+            setupEventListeners() {
+                const addBtn = document.getElementById('add-panel');
+                const saveBtn = document.getElementById('save');
+                const loadBtn = document.getElementById('load');
+                const exportBtn = document.getElementById('export-json');
+                const importInput = document.getElementById('import-json');
+                const importBtn = document.getElementById('import-json-btn');
+                const clearBtn = document.getElementById('clear');
+                
+                if (addBtn) addBtn.onclick = () => this.addPanel();
+                if (saveBtn) saveBtn.onclick = () => this.saveLayout();
+                if (loadBtn) loadBtn.onclick = () => this.loadLayout();
+                if (exportBtn) exportBtn.onclick = () => this.exportToJSON();
+                if (importBtn) importBtn.onclick = () => importInput.click();
+                if (importInput) importInput.onchange = (e) => this.importFromJSON(e);
+                if (clearBtn) clearBtn.onclick = () => this.clearAll();
+
+                document.addEventListener('mousemove', e => this.handleMouseMove(e));
+                document.addEventListener('mouseup', () => this.handleMouseUp());
+            }
+
+            createPanelDOM(panel) {
+                const panelEl = document.createElement('div');
+                panelEl.className = 'panel';
+                panelEl.dataset.id = panel.id;
+                
+                this.updatePanelPosition(panelEl, panel);
+
+                const header = document.createElement('div');
+                header.className = 'panel-header';
+                header.textContent = panel.title;
+                header.addEventListener('mousedown', e => this.startDrag(e, panelEl, panel));
+
+                const panelContent = document.createElement('div');
+                panelContent.className = 'panel-content';
+                panelContent.innerHTML = panel.content;
+
+                const resizeHandle = document.createElement('div');
+                resizeHandle.className = 'resize-handle';
+                resizeHandle.addEventListener('mousedown', e => this.startResize(e, panelEl, panel));
+
+                panelEl.appendChild(header);
+                panelEl.appendChild(panelContent);
+                panelEl.appendChild(resizeHandle);
+                this.grid.appendChild(panelEl);
+
+                return panelEl;
+            }
+
+            updatePanelPosition(panelEl, panel) {
+                panelEl.style.gridColumn = `${panel.origin.col + 1} / span ${panel.size.width}`;
+                panelEl.style.gridRow = `${panel.origin.row + 1} / span ${panel.size.height}`;
+            }
+
+            startDrag(e, panelEl, panel) {
+                e.preventDefault();
+                const rect = this.grid.getBoundingClientRect();
+                const panelRect = panelEl.getBoundingClientRect();
+                
+                const currentPanel = this.panels.find(p => p.id === panel.id);
+                
+                this.dragContext = {
+                    panelId: panel.id,
+                    initialOrigin: { ...currentPanel.origin },
+                    initialArea: { ...currentPanel.size },
+                    lastValidOrigin: { ...currentPanel.origin },
+                    allPanels: this.panels,
+                    gridRect: rect,
+                    cellDimensions: {
+                        width: rect.width / this.gridConfig.columns,
+                        height: rect.height / this.gridConfig.rows
+                    },
+                    dragOffset: {
+                        x: e.clientX - panelRect.left,
+                        y: e.clientY - panelRect.top
+                    },
+                    gridConfig: this.gridConfig
+                };
+                
+                panelEl.classList.add('dragging');
+                document.body.style.cursor = 'grabbing';
+            }
+
+            startResize(e, panelEl, panel) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const rect = this.grid.getBoundingClientRect();
+                const currentPanel = this.panels.find(p => p.id === panel.id);
+                
+                this.resizeContext = {
+                    panelId: panel.id,
+                    panelOrigin: { ...currentPanel.origin },
+                    currentResizeOrigin: {
+                        col: currentPanel.origin.col + currentPanel.size.width,
+                        row: currentPanel.origin.row + currentPanel.size.height
+                    },
+                    initialSize: { ...currentPanel.size },
+                    lastValidSize: { ...currentPanel.size },
+                    allPanels: this.panels,
+                    gridRect: rect,
+                    cellDimensions: {
+                        width: rect.width / this.gridConfig.columns,
+                        height: rect.height / this.gridConfig.rows
+                    },
+                    gridConfig: this.gridConfig,
+                    minSize: this.minSize
+                };
+                
+                panelEl.classList.add('dragging');
+                document.body.style.cursor = 'nw-resize';
+            }
+
+            handleMouseMove(e) {
+                if (this.dragContext) {
+                    this.handleDragMove(e);
+                } else if (this.resizeContext) {
+                    this.handleResizeMove(e);
+                }
+            }
+
+            handleDragMove(e) {
+                const dragResult = handlePanelDrag(e, this.dragContext);
+                const panelEl = document.querySelector(`[data-id="${this.dragContext.panelId}"]`);
+                
+                panelEl.style.gridColumn = `${dragResult.origin.col + 1} / span ${dragResult.size.width}`;
+                panelEl.style.gridRow = `${dragResult.origin.row + 1} / span ${dragResult.size.height}`;
+                
+                if (dragResult.newValidOrigin) {
+                    this.dragContext.lastValidOrigin = { ...dragResult.newValidOrigin };
+                }
+                
+                this.dragContext.lastDragResult = dragResult;
+                this.showDropPreview(dragResult);
+            }
+
+            handleResizeMove(e) {
+                const resizeResult = handlePanelResize(e, this.resizeContext);
+                const panelEl = document.querySelector(`[data-id="${this.resizeContext.panelId}"]`);
+                
+                let displaySize;
+                
+                if (resizeResult.isValid) {
+                    displaySize = resizeResult.size;
+                    this.resizeContext.lastValidSize = { ...resizeResult.size };
+                    
+                    this.resizeContext.currentResizeOrigin = {
+                        col: this.resizeContext.panelOrigin.col + displaySize.width,
+                        row: this.resizeContext.panelOrigin.row + displaySize.height
+                    };
+                } else {
+                    displaySize = this.resizeContext.lastValidSize;
+                }
+                
+                panelEl.style.gridColumn = `${resizeResult.panelOrigin.col + 1} / span ${displaySize.width}`;
+                panelEl.style.gridRow = `${resizeResult.panelOrigin.row + 1} / span ${displaySize.height}`;
+                
+                this.resizeContext.lastResizeResult = {
+                    ...resizeResult,
+                    displaySize: displaySize
+                };
+                
+                this.showResizePreview({
+                    ...resizeResult,
+                    size: displaySize,
+                    canDrop: true
+                });
+            }
+
+            handleMouseUp() {
+                if (this.dragContext) {
+                    this.handleDragRelease();
+                } else if (this.resizeContext) {
+                    this.handleResizeRelease();
+                }
+            }
+
+            handleDragRelease() {
+                const panelEl = document.querySelector(`[data-id="${this.dragContext.panelId}"]`);
+                const finalDragResult = this.dragContext.lastDragResult;
+                
+                if (finalDragResult && finalDragResult.canDrop) {
+                    this.panels = handlePanelRelease(finalDragResult, this.panels, this.dragContext.panelId);
+                } else {
+                    const lastValidOrigin = this.dragContext.lastValidOrigin || this.dragContext.initialOrigin;
+                    
+                    const recalculatedResult = calculatePanelPosition(
+                        {
+                            x: this.dragContext.gridRect.left + (lastValidOrigin.col * this.dragContext.cellDimensions.width),
+                            y: this.dragContext.gridRect.top + (lastValidOrigin.row * this.dragContext.cellDimensions.height)
+                        },
+                        this.dragContext.gridRect, this.dragContext.cellDimensions,
+                        { x: 0, y: 0 }, this.dragContext.initialOrigin, this.dragContext.initialArea,
+                        lastValidOrigin, this.dragContext.allPanels, this.dragContext.panelId, this.dragContext.gridConfig
+                    );
+                    
+                    const revertOrigin = recalculatedResult.displayOrigin || lastValidOrigin;
+                    const revertSize = recalculatedResult.displaySize || this.dragContext.initialArea;
+                    
+                    panelEl.style.gridColumn = `${revertOrigin.col + 1} / span ${revertSize.width}`;
+                    panelEl.style.gridRow = `${revertOrigin.row + 1} / span ${revertSize.height}`;
+                    
+                    this.panels = updatePanelInArray(this.panels, this.dragContext.panelId, revertOrigin, revertSize);
+                }
+                
+                panelEl.classList.remove('dragging');
+                document.body.style.cursor = '';
+                this.dragContext = null;
+                this.clearPreviews();
+            }
+
+            handleResizeRelease() {
+                const panelEl = document.querySelector(`[data-id="${this.resizeContext.panelId}"]`);
+                const finalResizeResult = this.resizeContext.lastResizeResult;
+                
+                if (finalResizeResult && finalResizeResult.canDrop) {
+                    this.panels = handleResizeRelease(finalResizeResult, this.panels, this.resizeContext.panelId);
+                } else {
+                    const fixedOrigin = this.resizeContext.fixedOrigin;
+                    const initialSize = this.resizeContext.initialSize;
+                    panelEl.style.gridColumn = `${fixedOrigin.col + 1} / span ${initialSize.width}`;
+                    panelEl.style.gridRow = `${fixedOrigin.row + 1} / span ${initialSize.height}`;
+                }
+                
+                panelEl.classList.remove('dragging');
+                document.body.style.cursor = '';
+                this.resizeContext = null;
+                this.clearPreviews();
+            }
+
+            clearPreviews() {
+                const preview = document.querySelector('.drop-preview');
+                if (preview) preview.remove();
+            }
+
+            showDropPreview(dragResult) {
+                let preview = document.querySelector('.drop-preview');
+                if (!preview) {
+                    preview = document.createElement('div');
+                    preview.className = 'drop-preview';
+                    this.grid.appendChild(preview);
+                }
+
+                let className = 'drop-preview';
+                if (!dragResult.canDrop) {
+                    className += ' invalid';
+                } else if (dragResult.isPenetrationCollapse) {
+                    className += ' resized';
+                } else if (dragResult.isResized) {
+                    className += ' resized';
+                }
+                
+                preview.className = className;
+                preview.style.gridColumn = `${dragResult.origin.col + 1} / span ${dragResult.size.width}`;
+                preview.style.gridRow = `${dragResult.origin.row + 1} / span ${dragResult.size.height}`;
+            }
+
+            showResizePreview(resizeResult) {
+                let preview = document.querySelector('.drop-preview');
+                if (!preview) {
+                    preview = document.createElement('div');
+                    preview.className = 'drop-preview';
+                    this.grid.appendChild(preview);
+                }
+
+                let className = 'drop-preview';
+                if (!resizeResult.canDrop) {
+                    className += ' invalid';
+                } else {
+                    className += ' resized';
+                }
+                
+                preview.className = className;
+                preview.style.gridColumn = `${resizeResult.panelOrigin.col + 1} / span ${resizeResult.size.width}`;
+                preview.style.gridRow = `${resizeResult.panelOrigin.row + 1} / span ${resizeResult.size.height}`;
+            }
+
+            addPanel() {
+                const emptySpace = findEmptySpace(this.panels, this.gridConfig, this.minSize);
+                if (emptySpace) {
+                    const panel = createPanel(++this.panelCounter, emptySpace, this.minSize);
+                    this.panels.push(panel);
+                    this.createPanelDOM(panel);
+                }
+            }
+
+            saveLayout() {
+                localStorage.setItem('gridLayout', JSON.stringify(this.panels));
+            }
+
+            loadLayout() {
+                const saved = localStorage.getItem('gridLayout');
+                if (!saved) return;
+
+                this.clearAll();
+                this.panels = JSON.parse(saved);
+                
+                this.panels.forEach(panel => {
+                    this.createPanelDOM(panel);
+                    this.panelCounter = Math.max(this.panelCounter, parseInt(panel.id));
+                });
+            }
+
+            exportToJSON() {
+                const layoutData = {
+                    version: '1.0',
+                    timestamp: new Date().toISOString(),
+                    gridConfig: this.gridConfig,
+                    panels: this.panels
+                };
+
+                const jsonString = JSON.stringify(layoutData, null, 2);
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `grid-layout-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+
+            importFromJSON(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const layoutData = JSON.parse(e.target.result);
+                        
+                        if (!layoutData.panels || !Array.isArray(layoutData.panels)) {
+                            throw new Error('Invalid layout file: missing panels array');
+                        }
+
+                        layoutData.panels.forEach((panel, index) => {
+                            if (!panel.id || !panel.origin || !panel.size) {
+                                throw new Error(`Invalid panel at index ${index}: missing required fields`);
+                            }
+                            if (typeof panel.origin.col !== 'number' || typeof panel.origin.row !== 'number') {
+                                throw new Error(`Invalid panel ${panel.id}: invalid origin coordinates`);
+                            }
+                            if (typeof panel.size.width !== 'number' || typeof panel.size.height !== 'number') {
+                                throw new Error(`Invalid panel ${panel.id}: invalid size dimensions`);
+                            }
+                        });
+
+                        this.clearAll();
+                        this.panels = layoutData.panels;
+                        
+                        this.panels.forEach(panel => {
+                            this.createPanelDOM(panel);
+                            this.panelCounter = Math.max(this.panelCounter, parseInt(panel.id));
+                        });
+                        
+                    } catch (error) {
+                        console.error('Import error:', error);
+                    }
+                };
+                
+                reader.readAsText(file);
+                event.target.value = '';
+            }
+
+            clearAll() {
+                this.grid.querySelectorAll('.panel').forEach(p => p.remove());
+                this.panels = [];
+                this.panelCounter = 0;
+            }
+
+            createSamplePanels() {
+                const samplePanels = [
+                    createPanel(++this.panelCounter, {col: 0, row: 0}, {width: 3, height: 2}, 'Chat Stream', 'Messages appear here in real-time'),
+                    createPanel(++this.panelCounter, {col: 3, row: 0}, {width: 5, height: 3}, 'Character Panel', 'Character information and stats display'),
+                    createPanel(++this.panelCounter, {col: 8, row: 0}, {width: 4, height: 2}, 'Control Strip', 'Game controls and quick actions'),
+                    createPanel(++this.panelCounter, {col: 0, row: 2}, {width: 3, height: 4}, 'Status Monitor', 'System status and notifications'),
+                    createPanel(++this.panelCounter, {col: 3, row: 3}, {width: 9, height: 3}, 'Input Console', 'Type your commands and messages here...')
+                ];
+
+                samplePanels.forEach(panel => {
+                    this.panels.push(panel);
+                    this.createPanelDOM(panel);
+                });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => new GridDashboard());
+    </script>
   </body>
 </html>

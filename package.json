@@ -7,26 +7,16 @@
     "build": "tsc",
     "dev": "ts-node src/cli.ts",
     "start": "node dist/cli.js",
-    "dev:restart": "node restart.js"
+    "ui": "cd ui && npm start"
   },
   "dependencies": {
     "axios": "^1.6.0",
-    "body-parser": "^2.2.0",
-    "cors": "^2.8.5",
     "dotenv": "^16.3.0",
-    "express": "^5.1.0",
-    "pg": "^8.11.0",
-    "uuid": "^11.1.0",
-    "ws": "^8.18.2"
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
-    "@types/body-parser": "^1.19.6",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.3",
     "@types/node": "^20.8.0",
-    "@types/pg": "^8.10.0",
     "@types/uuid": "^10.0.0",
-    "@types/ws": "^8.18.1",
     "ts-node": "^10.9.0",
     "typescript": "^5.2.0"
   }

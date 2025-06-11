@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Character Panel Movement Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+        pre { background: #f0f0f0; padding: 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h2>Character Panel Movement Test</h2>
+    <p>Testing corrected three-phase collision detection logic</p>
+    
+    <button onclick="runTest()">Run Test</button>
+    <div id="results"></div>
+
+    <script>
+        const gridConfig = { columns: 12, rows: 6 };
+        const minSize = { width: 1, height: 1 };
+        
+        const initialPanels = [
+            { id: 'chat', origin: { col: 0, row: 0 }, size: { width: 3, height: 2 } },
+            { id: 'character', origin: { col: 3, row: 0 }, size: { width: 5, height: 3 } },
+            { id: 'control', origin: { col: 8, row: 0 }, size: { width: 4, height: 2 } },
+            { id: 'status', origin: { col: 0, row: 2 }, size: { width: 3, height: 4 } },
+            { id: 'input', origin: { col: 3, row: 3 }, size: { width: 9, height: 3 } }
+        ];
+        
+        function isCellOccupied(col, row, allPanels, excludePanelId) {
+            return allPanels.some(panel => {
+                if (panel.id === excludePanelId) return false;
+                return col >= panel.origin.col && col < panel.origin.col + panel.size.width &&
+                       row >= panel.origin.row && row < panel.origin.row + panel.size.height;
+            });
+        }
+        
+        function hasEdgeCollisions(origin, area, allPanels, excludePanelId, gridConfig) {
+            if (origin.col < 0 || origin.row < 0 || 
+                origin.col + area.width > gridConfig.columns ||
+                origin.row + area.height > gridConfig.rows) {
+                return true;
+            }
+            
+            for (let col = origin.col; col < origin.col + area.width; col++) {
+                for (let row = origin.row; row < origin.row + area.height; row++) {
+                    if (isCellOccupied(col, row, allPanels, excludePanelId)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+        
+        function getMovementDirection(initialOrigin, hypotheticalOrigin) {
+            const deltaCol = hypotheticalOrigin.col - initialOrigin.col;
+            const deltaRow = hypotheticalOrigin.row - initialOrigin.row;
+            
+            if (Math.abs(deltaCol) > Math.abs(deltaRow)) {
+                return deltaCol > 0 ? 'RIGHT' : 'LEFT';
+            } else {
+                return deltaRow > 0 ? 'DOWN' : 'UP';
+            }
+        }
+        
+        function collapseFromLeadingEdge(origin, initialArea, movementDirection, allPanels, excludePanelId, gridConfig, minSize) {
+            let hypotheticalArea = { ...initialArea };
+            
+            switch(movementDirection) {
+                case 'DOWN':
+                    while (hypotheticalArea.height >= minSize.height) {
+                        if (!hasEdgeCollisions(origin, hypotheticalArea, allPanels, excludePanelId, gridConfig)) {
+                            return hypotheticalArea;
+                        }
+                        hypotheticalArea.height--;
+                    }
+                    break;
+            }
+            return null;
+        }
+        
+        function testCorrectedLogic() {
+            const characterPanel = initialPanels.find(p => p.id === 'character');
+            const otherPanels = initialPanels.filter(p => p.id !== 'character');
+            
+            const initialOrigin = characterPanel.origin; // (3,0)
+            const initialArea = characterPanel.size;     // 5×3
+            const targetOrigin = { col: 1, row: 2 };     // left 2, down 2
+            
+            const movementDirection = getMovementDirection(initialOrigin, targetOrigin);
+            
+            // PHASE 1: Try full area at target position
+            if (!hasEdgeCollisions(targetOrigin, initialArea, otherPanels, 'character', gridConfig)) {
+                return {
+                    phase: 'PHASE_1_FULL_AREA',
+                    success: true,
+                    origin: targetOrigin,
+                    size: initialArea,
+                    resized: false
+                };
+            }
+            
+            // PHASE 2: Try leading edge collapse at target position
+            const collapsedArea = collapseFromLeadingEdge(
+                targetOrigin, initialArea, movementDirection,
+                otherPanels, 'character', gridConfig, minSize
+            );
+            
+            if (collapsedArea) {
+                return {
+                    phase: 'PHASE_2_LEADING_EDGE_COLLAPSE',
+                    success: true,
+                    origin: targetOrigin,
+                    size: collapsedArea,
+                    resized: true,
+                    movementDirection
+                };
+            }
+            
+            return {
+                phase: 'PHASE_3_FAILED',
+                success: false,
+                origin: targetOrigin,
+                size: initialArea
+            };
+        }
+        
+        function runTest() {
+            const result = testCorrectedLogic();
+            
+            document.getElementById('results').innerHTML = `
+                <h3>Test Results</h3>
+                <div class="${result.success ? 'success' : 'error'}">
+                    ${result.success ? 'SUCCESS' : 'FAILED'}
+                </div>
+                <p><strong>Phase:</strong> ${result.phase}</p>
+                <p><strong>Movement Direction:</strong> ${result.movementDirection || 'DOWN'}</p>
+                <p><strong>Final Position:</strong> (${result.origin.col}, ${result.origin.row})</p>
+                <p><strong>Final Size:</strong> ${result.size.width} × ${result.size.height}</p>
+                <p><strong>Resized:</strong> ${result.resized ? 'Yes' : 'No'}</p>
+                
+                <h4>Expected Behavior:</h4>
+                <p>Character Panel should collapse downward from 5×3 to 5×1 at position (1,2)</p>
+                <p class="${result.success && result.size.width === 5 && result.size.height === 1 ? 'success' : 'error'}">
+                    ${result.success && result.size.width === 5 && result.size.height === 1 ? 
+                      '✓ Correct: Panel collapsed to 5×1 as expected' : 
+                      '✗ Incorrect: Panel should be 5×1'}
+                </p>
+                
+                <pre>${JSON.stringify(result, null, 2)}</pre>
+            `;
+        }
+    </script>
+</body>
+</html> 

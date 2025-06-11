@@ -1,0 +1,75 @@
+{
+  "version": "1.0",
+  "timestamp": "2025-06-11T02:52:09.756Z",
+  "gridConfig": {
+    "columns": 12,
+    "rows": 6
+  },
+  "panels": [
+    {
+      "id": "1",
+      "origin": {
+        "col": 0,
+        "row": 0
+      },
+      "size": {
+        "width": 3,
+        "height": 2
+      },
+      "title": "Chat Stream",
+      "content": "Messages appear here in real-time"
+    },
+    {
+      "id": "2",
+      "origin": {
+        "col": 3,
+        "row": 0
+      },
+      "size": {
+        "width": 4,
+        "height": 2
+      },
+      "title": "Character Panel",
+      "content": "Character information and stats display"
+    },
+    {
+      "id": "3",
+      "origin": {
+        "col": 8,
+        "row": 0
+      },
+      "size": {
+        "width": 4,
+        "height": 2
+      },
+      "title": "Control Strip",
+      "content": "Game controls and quick actions"
+    },
+    {
+      "id": "4",
+      "origin": {
+        "col": 0,
+        "row": 2
+      },
+      "size": {
+        "width": 3,
+        "height": 4
+      },
+      "title": "Status Monitor",
+      "content": "System status and notifications"
+    },
+    {
+      "id": "5",
+      "origin": {
+        "col": 3,
+        "row": 3
+      },
+      "size": {
+        "width": 9,
+        "height": 3
+      },
+      "title": "Input Console",
+      "content": "Type your commands and messages here..."
+    }
+  ]
+}

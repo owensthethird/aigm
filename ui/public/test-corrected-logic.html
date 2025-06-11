@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Corrected Logic - Character Panel Movement</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        
+        .test-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 800px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .grid-visualization {
+            display: grid;
+            grid-template-columns: repeat(12, 40px);
+            grid-template-rows: repeat(6, 40px);
+            gap: 2px;
+            margin: 20px 0;
+            background: #eee;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        
+        .grid-cell {
+            background: white;
+            border: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            color: #666;
+        }
+        
+        .panel-area {
+            background: #3b82f6;
+            color: white;
+            font-weight: bold;
+            font-size: 10px;
+        }
+        
+        .panel-area.char { background: #10b981; }
+        .panel-area.status { background: #f59e0b; }
+        .panel-area.input { background: #ef4444; }
+        .panel-area.control { background: #8b5cf6; }
+        .panel-area.chat { background: #06b6d4; }
+        
+        .test-results {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        
+        .success { color: #10b981; font-weight: bold; }
+        .error { color: #ef4444; font-weight: bold; }
+        
+        pre {
+            background: #f1f5f9;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Character Panel Movement Test</h1>
+        <p>Testing the corrected three-phase collision detection logic:</p>
+        <ul>
+            <li><strong>Phase 1:</strong> Try full area at target position</li>
+            <li><strong>Phase 2:</strong> Try leading edge collapse at target position</li>
+            <li><strong>Phase 3:</strong> Penetration depth fallback (only if needed)</li>
+        </ul>
+        
+        <h2>Initial Layout</h2>
+        <div class="grid-visualization" id="initial-grid"></div>
+        
+        <h2>Test Scenario</h2>
+        <p>Moving Character Panel from (3,0) to (1,2) - left 2 cells, down 2 cells</p>
+        
+        <button onclick="runTest()">Run Test</button>
+        <button onclick="resetTest()">Reset</button>
+        
+        <div class="test-results" id="test-results"></div>
+        
+        <h2>Expected Result</h2>
+        <div class="grid-visualization" id="expected-grid"></div>
+    </div>
+
+    <script>
+        // Grid configuration
+        const gridConfig = { columns: 12, rows: 6 };
+        const minSize = { width: 1, height: 1 };
+        
+        // Initial panel layout
+        const initialPanels = [
+            { id: 'chat', origin: { col: 0, row: 0 }, size: { width: 3, height: 2 }, title: 'Chat Stream' },
+            { id: 'character', origin: { col: 3, row: 0 }, size: { width: 5, height: 3 }, title: 'Character Panel' },
+            { id: 'control', origin: { col: 8, row: 0 }, size: { width: 4, height: 2 }, title: 'Control Strip' },
+            { id: 'status', origin: { col: 0, row: 2 }, size: { width: 3, height: 4 }, title: 'Status Monitor' },
+            { id: 'input', origin: { col: 3, row: 3 }, size: { width: 9, height: 3 }, title: 'Input Console' }
+        ];
+        
+        // Include the corrected collision detection functions from index.html
+        function isCellOccupied(col, row, allPanels, excludePanelId) {
+            return allPanels.some(panel => {
+                if (panel.id === excludePanelId) return false;
+                
+                return col >= panel.origin.col && 
+                       col < panel.origin.col + panel.size.width &&
+                       row >= panel.origin.row && 
+                       row < panel.origin.row + panel.size.height;
+            });
+        }
+        
+        function hasEdgeCollisions(origin, area, allPanels, excludePanelId, gridConfig) {
+            if (origin.col < 0 || origin.row < 0 || 
+                origin.col + area.width > gridConfig.columns ||
+                origin.row + area.height > gridConfig.rows) {
+                return true;
+            }
+            
+            for (let col = origin.col; col < origin.col + area.width; col++) {
+                for (let row = origin.row; row < origin.row + area.height; row++) {
+                    if (isCellOccupied(col, row, allPanels, excludePanelId)) {
+                        return true;
+                    }
+                }
+            }
+            
+            return false;
+        }
+        
+        function getMovementDirection(initialOrigin, hypotheticalOrigin) {
+            const deltaCol = hypotheticalOrigin.col - initialOrigin.col;
+            const deltaRow = hypotheticalOrigin.row - initialOrigin.row;
+            
+            if (Math.abs(deltaCol) > Math.abs(deltaRow)) {
+                return deltaCol > 0 ? 'RIGHT' : 'LEFT';
+            } else {
+                return deltaRow > 0 ? 'DOWN' : 'UP';
+            }
+        }
+        
+        function collapseFromLeadingEdge(origin, initialArea, movementDirection, allPanels, excludePanelId, gridConfig, minSize) {
+            let hypotheticalArea = { ...initialArea };
+            
+            switch(movementDirection) {
+                case 'LEFT':
+                case 'RIGHT':
+                    while (hypotheticalArea.width >= minSize.width) {
+                        if (!hasEdgeCollisions(origin, hypotheticalArea, allPanels, excludePanelId, gridConfig)) {
+                            return hypotheticalArea;
+                        }
+                        hypotheticalArea.width--;
+                    }
+                    break;
+                    
+                case 'UP':
+                case 'DOWN':
+                    while (hypotheticalArea.height >= minSize.height) {
+                        if (!hasEdgeCollisions(origin, hypotheticalArea, allPanels, excludePanelId, gridConfig)) {
+                            return hypotheticalArea;
+                        }
+                        hypotheticalArea.height--;
+                    }
+                    break;
+            }
+            
+            return null;
+        }
+        
+        function isOriginOccupied(origin, allPanels, excludePanelId) {
+            return allPanels.some(panel => {
+                if (panel.id === excludePanelId) return false;
+                
+                return origin.col >= panel.origin.col && 
+                       origin.col < panel.origin.col + panel.size.width &&
+                       origin.row >= panel.origin.row && 
+                       origin.row < panel.origin.row + panel.size.height;
+            });
+        }
+        
+        // Corrected collision detection logic
+        function calculatePanelPosition(
+            initialOrigin, initialArea, hypotheticalOrigin, 
+            allPanels, excludePanelId, gridConfig, minSize = { width: 1, height: 1 }
+        ) {
+            const movementDirection = getMovementDirection(initialOrigin, hypotheticalOrigin);
+            
+            // PHASE 1: Try full area at target position first
+            if (!hasEdgeCollisions(hypotheticalOrigin, initialArea, allPanels, excludePanelId, gridConfig)) {
+                return {
+                    isValid: true,
+                    origin: hypotheticalOrigin,
+                    size: initialArea,
+                    isResized: false,
+                    phase: 'PHASE_1_FULL_AREA'
+                };
+            }
+            
+            // PHASE 2: Try leading edge collapse at target position
+            const targetCollapsedArea = collapseFromLeadingEdge(
+                hypotheticalOrigin, initialArea, movementDirection,
+                allPanels, excludePanelId, gridConfig, minSize
+            );
+            
+            if (targetCollapsedArea) {
+                return {
+                    isValid: true,
+                    origin: hypotheticalOrigin,
+                    size: targetCollapsedArea,
+                    isResized: true,
+                    phase: 'PHASE_2_LEADING_EDGE_COLLAPSE',
+                    movementDirection
+                };
+            }
+            
+            // PHASE 3: Penetration depth fallback would go here
+            // (simplified for this test)
+            
+            return {
+                isValid: false,
+                reason: 'NO_SPACE_AVAILABLE',
+                origin: hypotheticalOrigin,
+                size: initialArea,
+                phase: 'PHASE_3_FAILED'
+            };
+        }
+        
+        // Visualization functions
+        function renderGrid(gridId, panels) {
+            const grid = document.getElementById(gridId);
+            grid.innerHTML = '';
+            
+            for (let row = 0; row < gridConfig.rows; row++) {
+                for (let col = 0; col < gridConfig.columns; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+                    cell.textContent = `${col},${row}`;
+                    
+                    const panel = panels.find(p => 
+                        col >= p.origin.col && col < p.origin.col + p.size.width &&
+                        row >= p.origin.row && row < p.origin.row + p.size.height
+                    );
+                    
+                    if (panel) {
+                        cell.className += ` panel-area ${panel.id}`;
+                        cell.textContent = panel.id.charAt(0).toUpperCase();
+                    }
+                    
+                    grid.appendChild(cell);
+                }
+            }
+        }
+        
+        function runTest() {
+            const characterPanel = initialPanels.find(p => p.id === 'character');
+            const otherPanels = initialPanels.filter(p => p.id !== 'character');
+            
+            const initialOrigin = characterPanel.origin;
+            const initialArea = characterPanel.size;
+            const targetOrigin = { col: 1, row: 2 }; // left 2, down 2
+            
+            const result = calculatePanelPosition(
+                initialOrigin, initialArea, targetOrigin,
+                otherPanels, 'character', gridConfig, minSize
+            );
+            
+            // Display results
+            const resultsDiv = document.getElementById('test-results');
+            resultsDiv.innerHTML = `
+                <h3>Test Results</h3>
+                <div class="${result.isValid ? 'success' : 'error'}">
+                    Result: ${result.isValid ? 'SUCCESS' : 'FAILED'}
+                </div>
+                <p><strong>Phase:</strong> ${result.phase}</p>
+                <p><strong>Movement Direction:</strong> ${result.movementDirection}</p>
+                <p><strong>Final Position:</strong> (${result.origin.col}, ${result.origin.row})</p>
+                <p><strong>Final Size:</strong> ${result.size.width} × ${result.size.height}</p>
+                <p><strong>Resized:</strong> ${result.isResized ? 'Yes' : 'No'}</p>
+                
+                <h4>Analysis:</h4>
+                <pre>${JSON.stringify(result, null, 2)}</pre>
+            `;
+            
+            // Show expected result
+            if (result.isValid) {
+                const expectedPanels = otherPanels.concat([{
+                    id: 'character',
+                    origin: result.origin,
+                    size: result.size,
+                    title: 'Character Panel'
+                }]);
+                renderGrid('expected-grid', expectedPanels);
+            }
+        }
+        
+        function resetTest() {
+            document.getElementById('test-results').innerHTML = '';
+            renderGrid('expected-grid', []);
+        }
+        
+        // Initialize
+        renderGrid('initial-grid', initialPanels);
+    </script>
+</body>
+</html> 

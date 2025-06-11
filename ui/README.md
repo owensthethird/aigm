@@ -1,115 +1,127 @@
-# AI Game Master UI
+# AI Game Master - Grid Dashboard Prototype
 
-This is the user interface for the AI Game Master application, designed to provide an immersive experience for tabletop role-playing games with AI assistance.
-
-## Project Structure
-
-The UI project follows a modular structure:
-
-```
-ui/
-├── public/                 # Static assets
-├── src/
-│   ├── api/                # API service modules
-│   ├── components/         # Reusable UI components
-│   ├── contexts/           # React context providers
-│   ├── hooks/              # Custom React hooks
-│   ├── layouts/            # Layout components
-│   ├── pages/              # Page components
-│   ├── styles/             # CSS and styling
-│   ├── types/              # TypeScript type definitions
-│   └── utils/              # Utility functions
-├── package.json            # Dependencies and scripts
-└── tsconfig.json           # TypeScript configuration
-```
+A functional grid-based dashboard system prototype for the AI Game Master platform. This implementation is based on the functional programming design principles and provides an interactive, drag-and-drop panel system.
 
 ## Features
 
-- Three-panel responsive layout for game management
-- Real-time chat interface with context-based styling
-- Character creation and management
-- Game state tracking and visualization
-- n8n API integration for AI interactions
-- Multiple visual themes
-
-## Color System
-
-The UI implements a comprehensive color system with context-based communication:
-
-- **Administrative Context**: System-level communications with the user and AI
-- **Out-of-Character Context**: Meta-game discussions and game mechanics
-- **In-Character Context**: Narrative gameplay interactions and storytelling
-
-Each context has distinct color schemes for both user and AI messages, creating a clear visual hierarchy.
+- **Drag & Drop**: Smooth panel dragging with real-time position updates
+- **Smart Collision Detection**: Intelligent handling of occupied spaces  
+- **Penetration Collapse**: Panels automatically resize when moved into tight spaces
+- **Resize Handles**: Functional resize capability with collision detection
+- **Visual Feedback**: Drop previews with different states (valid/invalid/resized)
+- **Debug Mode**: Comprehensive debugging information during interactions
+- **Persistence**: Save/load layout functionality
+- **Smart Sizing**: Automatic size optimization based on available space
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js (v14+)
-- npm or yarn
-- n8n instance running (for full functionality)
+- Node.js (for the development server)
 
 ### Installation
 
-1. Navigate to the UI directory:
-   ```
-   cd ui
-   ```
-
-2. Install dependencies:
-   ```
-   npm install
-   ```
-   or
-   ```
-   yarn install
-   ```
-
-3. Start the development server:
-   ```
-   npm start
-   ```
-   or
-   ```
-   yarn start
-   ```
-
-4. Open [http://localhost:3000](http://localhost:3000) in your browser
-
-### Configuration
-
-Before using the application with n8n:
-
-1. Make sure your n8n instance is running
-2. Configure the API connection in the settings panel with:
-   - Base URL (default: http://localhost:5678)
-   - API Key
-
-## Building for Production
-
-To create a production build:
-
-```
-npm run build
-```
-or
-```
-yarn build
+1. Install dependencies:
+```bash
+npm install
 ```
 
-The build artifacts will be stored in the `build/` directory.
+2. Start the development server:
+```bash
+npm start
+```
 
-## Extending the UI
+This will start a local HTTP server on port 7777 and automatically open the dashboard in your browser.
 
-To add new components or features:
+### Alternative Serving Methods
 
-1. Create new components in the appropriate directories
-2. Update context providers as needed
-3. Implement additional hooks for specific functionality
-4. Add new pages and routes in App.tsx
+You can also serve the HTML file directly:
 
-## Related Documentation
+```bash
+# Using npm
+npm run serve
 
-- See the interface design document for detailed UI specifications
-- Refer to the color system documentation for the visual design guidelines
+# Using Python (if available)
+python -m http.server 7777
+
+# Or simply open public/index.html in your browser
+```
+
+## Usage
+
+### Basic Operations
+
+1. **Drag Panels**: Click and drag the panel header to move panels around
+2. **Resize Panels**: Use the resize handle in the bottom-right corner  
+3. **Add Panels**: Click "Add Panel" to create new panels
+4. **Save/Load**: Use the save/load buttons to persist your layout
+5. **Clear All**: Remove all panels and start fresh
+6. **Debug Mode**: Toggle debug information for development
+
+### Panel Features
+
+- **Smart Collision Avoidance**: Panels automatically adjust size when moved into occupied spaces
+- **Penetration Collapse**: Advanced size reduction based on movement direction
+- **Visual Previews**: See exactly where panels will be placed before dropping
+- **Minimum Size Constraints**: Panels maintain minimum usable sizes
+
+## Grid Configuration
+
+The grid system uses a 12x6 cell layout by default. This can be modified in the CSS variables:
+
+```css
+:root {
+    --columns: 12;
+    --rows: 6;
+    --gap: 8px;
+}
+```
+
+## Implementation Details
+
+This prototype implements:
+
+- **Functional Programming Principles**: Pure functions for calculations
+- **Immutable State Patterns**: Predictable state management  
+- **Smart Layout Algorithms**: Collision detection and space optimization
+- **Event-Driven Architecture**: Clean separation of concerns
+- **Performance Optimizations**: Efficient DOM updates and calculations
+
+## File Structure
+
+```
+ui/
+├── public/
+│   ├── index.html          # Complete grid system implementation
+│   └── manifest.json       # Web app manifest
+├── package.json            # Dependencies and scripts
+└── README.md              # This file
+```
+
+## Development
+
+The entire grid system is implemented in a single HTML file (`public/index.html`) containing:
+
+- CSS for styling and layout
+- JavaScript for functionality and event handling
+- Complete functional grid panel system
+- Sample data and panels
+
+This makes it easy to understand, modify, and integrate into larger applications.
+
+## Next Steps
+
+This prototype serves as the foundation for:
+
+1. Integration with the AI Game Master backend
+2. Addition of gaming-specific panel types
+3. Real-time multiplayer functionality  
+4. Enhanced accessibility features
+5. Mobile responsiveness
+6. Custom theming and branding
+
+## Browser Compatibility
+
+- Modern browsers supporting CSS Grid
+- ES6+ JavaScript features  
+- No framework dependencies
